@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Minimalist GPS Tracker">
+	<trk>
+		<name><![CDATA[1_1трол_9.04_ср_17:18_Глухов]]></name>
+		<trkseg>
+			<trkpt lat="52.267022" lon="104.257655">
+				<ele>468.450919</ele>
+				<time>2025-04-09T09:18:20Z</time>
+			</trkpt>
+			<trkpt lat="52.266135" lon="104.258122">
+				<ele>470.948139</ele>
+				<time>2025-04-09T09:18:29Z</time>
+			</trkpt>
+			<trkpt lat="52.265237" lon="104.258476">
+				<ele>472.687731</ele>
+				<time>2025-04-09T09:18:39Z</time>
+			</trkpt>
+			<trkpt lat="52.264369" lon="104.258878">
+				<ele>476.532974</ele>
+				<time>2025-04-09T09:18:54Z</time>
+			</trkpt>
+			<trkpt lat="52.263508" lon="104.259343">
+				<ele>478.038024</ele>
+				<time>2025-04-09T09:19:06Z</time>
+			</trkpt>
+			<trkpt lat="52.262620" lon="104.259810">
+				<ele>481.200807</ele>
+				<time>2025-04-09T09:19:20Z</time>
+			</trkpt>
+			<trkpt lat="52.261732" lon="104.260263">
+				<ele>479.699999</ele>
+				<time>2025-04-09T09:20:03Z</time>
+			</trkpt>
+			<trkpt lat="52.260831" lon="104.260776">
+				<ele>477.558775</ele>
+				<time>2025-04-09T09:20:14Z</time>
+			</trkpt>
+			<trkpt lat="52.259909" lon="104.261234">
+				<ele>473.079830</ele>
+				<time>2025-04-09T09:20:25Z</time>
+			</trkpt>
+			<trkpt lat="52.259013" lon="104.261707">
+				<ele>470.401274</ele>
+				<time>2025-04-09T09:20:36Z</time>
+			</trkpt>
+			<trkpt lat="52.258144" lon="104.262153">
+				<ele>465.789769</ele>
+				<time>2025-04-09T09:20:53Z</time>
+			</trkpt>
+			<trkpt lat="52.257276" lon="104.262598">
+				<ele>463.071386</ele>
+				<time>2025-04-09T09:21:34Z</time>
+			</trkpt>
+			<trkpt lat="52.256407" lon="104.263000">
+				<ele>462.841397</ele>
+				<time>2025-04-09T09:21:47Z</time>
+			</trkpt>
+			<trkpt lat="52.255504" lon="104.263188">
+				<ele>460.544876</ele>
+				<time>2025-04-09T09:22:16Z</time>
+			</trkpt>
+			<trkpt lat="52.254608" lon="104.263299">
+				<ele>464.727337</ele>
+				<time>2025-04-09T09:22:56Z</time>
+			</trkpt>
+		</trkseg>
+	</trk>
+</gpx>

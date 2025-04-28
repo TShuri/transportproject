@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="Minimalist GPS Tracker">
+	<trk>
+		<name><![CDATA[4_5трам_11.04_пт_11:00_Глухов]]></name>
+		<trkseg>
+			<trkpt lat="52.264606" lon="104.316172">
+				<ele>472.465298</ele>
+				<time>2025-04-11T03:01:25Z</time>
+			</trkpt>
+			<trkpt lat="52.264850" lon="104.317597">
+				<ele>474.333537</ele>
+				<time>2025-04-11T03:01:40Z</time>
+			</trkpt>
+			<trkpt lat="52.265189" lon="104.319029">
+				<ele>481.322762</ele>
+				<time>2025-04-11T03:02:30Z</time>
+			</trkpt>
+			<trkpt lat="52.265506" lon="104.320531">
+				<ele>482.180337</ele>
+				<time>2025-04-11T03:02:42Z</time>
+			</trkpt>
+			<trkpt lat="52.265832" lon="104.321995">
+				<ele>481.886697</ele>
+				<time>2025-04-11T03:02:54Z</time>
+			</trkpt>
+			<trkpt lat="52.266160" lon="104.323365">
+				<ele>481.721386</ele>
+				<time>2025-04-11T03:03:06Z</time>
+			</trkpt>
+			<trkpt lat="52.266465" lon="104.324807">
+				<ele>480.330396</ele>
+				<time>2025-04-11T03:03:35Z</time>
+			</trkpt>
+			<trkpt lat="52.266217" lon="104.326271">
+				<ele>481.577681</ele>
+				<time>2025-04-11T03:04:25Z</time>
+			</trkpt>
+			<trkpt lat="52.265701" lon="104.327556">
+				<ele>485.304319</ele>
+				<time>2025-04-11T03:04:48Z</time>
+			</trkpt>
+			<trkpt lat="52.265205" lon="104.328779">
+				<ele>486.712870</ele>
+				<time>2025-04-11T03:05:06Z</time>
+			</trkpt>
+			<trkpt lat="52.264699" lon="104.330024">
+				<ele>485.172260</ele>
+				<time>2025-04-11T03:05:23Z</time>
+			</trkpt>
+		</trkseg>
+	</trk>
+</gpx>
