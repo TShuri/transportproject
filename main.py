@@ -12,6 +12,7 @@ class AppConfig:
     SCRIPTS = {
         "Сохранение маршрута в csv": "scripts/other/extract_type_route.py",
         "Работа с транспортом": "scripts/transports_with_stops/transports_with_stops.py",
+        "Показать треки транспорта": "scripts/transports/transports_script.py",
         "Работа с анкетами": "scripts/ankets/ankets_script.py",
         "УДС с сегментами по анкетам": "scripts/stats_ankets/show_low_segments.py"
     }
@@ -41,6 +42,17 @@ class ScriptRunner:
     def run_transport_script():
         """Запуск скрипта для работы с транспортом"""
         script_path = AppConfig.SCRIPTS["Работа с транспортом"]
+
+        try:
+            subprocess.run([sys.executable, os.path.basename(script_path)],
+                           check=True, cwd=os.path.dirname(script_path))
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Ошибка запуска скрипта: {str(e)}")
+
+    @staticmethod
+    def run_show_tracks_script():
+        """Запуск скрипта для отображения треков транспорта без обработки"""
+        script_path = AppConfig.SCRIPTS["Показать треки транспорта"]
 
         try:
             subprocess.run([sys.executable, os.path.basename(script_path)],
@@ -108,6 +120,13 @@ class MainWindow:
         self.route_entry = ttk.Entry(transport_frame)
         self.route_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
 
+        # Кнопка для отображения треков транспорта
+        ttk.Button(
+            transport_frame,
+            text="Показать треки",
+            command=self.process_show_tracks
+        ).grid(row=0, column=2, padx=10, pady=5)
+
         # Кнопка для обработки транспорта
         ttk.Button(
             transport_frame,
@@ -173,6 +192,18 @@ class MainWindow:
 
         ScriptRunner.run_save_route(vehicle_type, route)
         ScriptRunner.run_transport_script()
+
+    def process_show_tracks(self):
+        """Обработка нажатия кнопки для обработки маршрута"""
+        vehicle_type = self.vehicle_type_var.get()
+        route = self.route_entry.get().strip() or None
+
+        if not vehicle_type:
+            messagebox.showwarning("Предупреждение", "Выберите тип транспорта")
+            return
+
+        ScriptRunner.run_save_route(vehicle_type, route)
+        ScriptRunner.run_show_tracks_script()
 
     def process_anket(self):
         """Обработка нажатия кнопки для обработки маршрута"""
