@@ -1,1 +1,3 @@
 *.html
+*.zip
+scripts/transports_with_stops/gtfs_temp/*
