@@ -49,7 +49,6 @@ mid_speed = avg_speed / 2
 avg_speed_kmh = avg_speed * 3.6
 mid_speed_kmh = avg_speed_kmh / 2
 
-
 def speed_color_kmh(v_mps):
     """
     v_mps — скорость в м/с
@@ -66,7 +65,6 @@ def speed_color_kmh(v_mps):
     else:
         return 'red'
 
-
 print(f"Загружено {len(df)} записей с координатами")
 
 # Определение остановок
@@ -76,7 +74,7 @@ print("Определение остановок...")
 SPEED_THRESHOLD = 1.9  # м/с
 MIN_STOP_DURATION = 35  # секунды - изменено с 20 на 45 секунд
 DISTANCE_THRESHOLD = 0.001  # примерно 100 метров в градусах
-STOP_AGGREGATION_THRESHOLD = 0.0001  # примерно 300 метров для агрегации остановок
+STOP_AGGREGATION_THRESHOLD = 0.0001   # примерно 300 метров для агрегации остановок
 
 # Находим точки с низкой скоростью
 low_speed_points = df[df['speed'] < SPEED_THRESHOLD].copy()
@@ -86,19 +84,19 @@ if len(low_speed_points) > 0:
     low_speed_points['next_time'] = low_speed_points['signal_time'].shift(-1)
     low_speed_points['duration'] = (low_speed_points['next_time'] - low_speed_points['signal_time']).dt.total_seconds()
     low_speed_points = low_speed_points.dropna(subset=['duration'])
-
+    
     # Фильтруем точки с достаточной продолжительностью остановки
     potential_stops = low_speed_points[low_speed_points['duration'] > MIN_STOP_DURATION]
-
+    
     if len(potential_stops) > 0:
         # Используем DBSCAN для кластеризации близких точек в остановки
         coords = potential_stops[['lat', 'lon']].values
         clustering = DBSCAN(eps=DISTANCE_THRESHOLD, min_samples=1).fit(coords)
-
+        
         # Создаем копию DataFrame для избежания предупреждения SettingWithCopyWarning
         potential_stops = potential_stops.copy()
         potential_stops['cluster_id'] = clustering.labels_
-
+        
         # Группируем точки по кластерам для получения уникальных остановок
         # Используем другое имя для агрегации количества точек
         stops = potential_stops.groupby('cluster_id').agg({
@@ -108,18 +106,18 @@ if len(low_speed_points) > 0:
             'duration': 'sum',
             'cluster_id': 'size'  # Используем 'size' вместо 'count'
         })
-
+        
         # Переименовываем столбец с количеством точек и сбрасываем индекс
         stops = stops.rename(columns={'cluster_id': 'point_count'}).reset_index()
-
+        
         # Добавляем идентификаторы остановок
         stops['stop_id'] = 'stop_' + stops.index.astype(str)
         stops['stop_name'] = 'Остановка ' + stops.index.astype(str)
-
+        
         # Определяем начальную и конечную остановки
         stops['is_first'] = False
         stops['is_last'] = False
-
+        
         if len(stops) > 0:
             # Находим остановку, ближайшую к началу маршрута
             first_time = df['signal_time'].min()
@@ -127,27 +125,24 @@ if len(low_speed_points) > 0:
             first_stop_idx = stops['time_from_start'].idxmin()
             stops.loc[first_stop_idx, 'is_first'] = True
             stops.loc[first_stop_idx, 'stop_name'] = 'Начальная остановка'
-
+            
             # Находим остановку, ближайшую к концу маршрута
             last_time = df['signal_time'].max()
             stops['time_to_end'] = abs((stops['signal_time'] - last_time).dt.total_seconds())
             last_stop_idx = stops['time_to_end'].idxmin()
             stops.loc[last_stop_idx, 'is_last'] = True
             stops.loc[last_stop_idx, 'stop_name'] = 'Конечная остановка'
-
+            
             print(f"Найдено {len(stops)} остановок")
         else:
             print("Остановки не найдены")
-            stops = pd.DataFrame(
-                columns=['stop_id', 'stop_name', 'lat', 'lon', 'is_first', 'is_last', 'point_count', 'duration'])
+            stops = pd.DataFrame(columns=['stop_id', 'stop_name', 'lat', 'lon', 'is_first', 'is_last', 'point_count', 'duration'])
     else:
         print("Не найдено точек с достаточной продолжительностью остановки")
-        stops = pd.DataFrame(
-            columns=['stop_id', 'stop_name', 'lat', 'lon', 'is_first', 'is_last', 'point_count', 'duration'])
+        stops = pd.DataFrame(columns=['stop_id', 'stop_name', 'lat', 'lon', 'is_first', 'is_last', 'point_count', 'duration'])
 else:
     print("Не найдено точек с низкой скоростью")
-    stops = pd.DataFrame(
-        columns=['stop_id', 'stop_name', 'lat', 'lon', 'is_first', 'is_last', 'point_count', 'duration'])
+    stops = pd.DataFrame(columns=['stop_id', 'stop_name', 'lat', 'lon', 'is_first', 'is_last', 'point_count', 'duration'])
 
 # Создание базовой карты
 print("Создание карты...")
@@ -161,7 +156,7 @@ folium.TileLayer(
     name='OSM карта',
     control=True,
     overlay=True,
-    show=True
+    show=True 
 ).add_to(map_tracks)
 
 # — ВСТАВКА: загрузка и отображение графа дорожной сети
@@ -169,7 +164,6 @@ roads = gpd.read_file("../../sources/UDS/Граф Иркутск_link.SHP").to_c
 # Собираем список геометрий дорог и строим STR-дерево
 road_geoms = list(roads.geometry)
 road_tree = STRtree(road_geoms)
-
 
 def snap_to_road_point(lat, lon):
     pt = Point(lon, lat)
@@ -179,7 +173,6 @@ def snap_to_road_point(lat, lon):
     # проекция точки на линию
     proj_pt = nearest_line.interpolate(nearest_line.project(pt))
     return proj_pt.y, proj_pt.x  # y=lat, x=lon
-
 
 print("Снаппим все точки маршрута на сеть дорог…")
 # Перезаписываем lat, lon в исходном df — дальше в коде менять ничего не нужно
@@ -207,18 +200,18 @@ print("Добавление точек на карту...")
 for idx, row in df.iterrows():
     # Создаем всплывающую подсказку с информацией о точке
     popup_text = f"Точка #{idx}<br>Координаты: {row['lat']}, {row['lon']}<br>Скорость: {row['speed']} м/с"
-
+    
     # Добавляем дополнительную информацию, если она есть
     if 'signal_time' in df.columns:
         popup_text += f"<br>Время: {row['signal_time']}"
     if 'direction' in df.columns:
         popup_text += f"<br>Направление: {row['direction']}"
-
+    
     # Определяем цвет точки в зависимости от скорости
     color = 'blue'
     if row['speed'] < SPEED_THRESHOLD:
         color = 'orange'  # Точки с низкой скоростью
-
+    
     # Добавляем маркер для каждой точки
     folium.CircleMarker(
         location=[row['lat'], row['lon']],
@@ -237,11 +230,11 @@ stops_layer = folium.FeatureGroup(name="Остановки")
 # Добавление остановок на карту
 if len(stops) > 0:
     print(f"Найдено {len(stops)} остановок перед агрегацией")
-
+    
     # Дополнительная агрегация остановок
     if len(stops) > 1:
         print("Выполняем дополнительную агрегацию остановок...")
-
+        
         # Используем координаты остановок для второго уровня кластеризации
         stop_coords = stops[['lat', 'lon']].values
         stop_clustering = DBSCAN(eps=STOP_AGGREGATION_THRESHOLD, min_samples=1).fit(stop_coords)
@@ -295,14 +288,14 @@ if len(stops) > 0:
         # Привязываем к кластеру (по координатам)
         stops_uuids['stop_cluster'] = clustering.labels_
 
-        # Считаем количество уникальных транспорта (uuid) на каждой остановке
+        # Считаем количество уникальных автобусов (uuid) на каждой остановке
         uuid_counts = stops_uuids.groupby('stop_cluster')['uuid'].nunique().reset_index()
         uuid_counts.columns = ['stop_cluster', 'unique_uuids']
 
         # Объединяем с aggregated_stops
         aggregated_stops = aggregated_stops.merge(uuid_counts, on='stop_cluster', how='left')
 
-        # Фильтруем — только остановки, которые посещают >= MIN_UUIDS транспорта
+        # Фильтруем — только остановки, которые посещают >= MIN_UUIDS автобусов
         MIN_UUIDS = 3
         aggregated_stops['is_potential_terminal'] = (
                 (aggregated_stops['duration'] > median_stop_duration * DURATION_FACTOR) &
@@ -328,21 +321,22 @@ if len(stops) > 0:
             icon_name = 'flag-checkered'
             stop_type = 'Конечная остановка'
             if 'unique_uuids' in stop:
-                popup_text += f"<br>UUID транспорта: {stop['unique_uuids']}"
+                popup_text += f"<br>UUID автобусов: {stop['unique_uuids']}"
         else:
             icon_color = 'blue'
             icon_name = 'bus'
             stop_type = 'Промежуточная остановка'
 
+        
         # Форматируем время остановки в минуты и секунды
         stop_minutes = int(stop['duration'] // 60)
         stop_seconds = int(stop['duration'] % 60)
         stop_time_str = f"{stop_minutes} мин {stop_seconds} сек"
-
+        
         # Создаем всплывающую подсказку с информацией об остановке
         popup_text = f"{stop_type}<br>ID: {stop['stop_id']}<br>Название: {stop['stop_name']}<br>Координаты: {stop['lat']}, {stop['lon']}"
         popup_text += f"<br>Количество точек: {stop['point_count']}<br>Время остановки: {stop_time_str}"
-
+        
         # Добавляем маркер для остановки
         folium.Marker(
             location=[stop['lat'], stop['lon']],
@@ -355,7 +349,6 @@ if len(stops) > 0:
 points_layer.add_to(map_tracks)
 stops_layer.add_to(map_tracks)
 
-
 def build_graph_from_roads(roads_gdf):
     G = nx.Graph()
     for i, row in roads_gdf.iterrows():
@@ -367,15 +360,13 @@ def build_graph_from_roads(roads_gdf):
                 G.add_edge(start, end, weight=dist, geometry=LineString([start, end]))
     return G
 
-
 print("Создаём граф дорог…")
 G_roads = build_graph_from_roads(roads)
 
-nodes = list(G_roads.nodes)
+nodes = list(G_roads.nodes)  
 # узлы хранятся как (x, y) == (lon, lat)
-nodes_coords = [(x, y) for x, y in nodes]
+nodes_coords = [(x, y) for x, y in nodes]  
 kdtree = scipy.spatial.KDTree(nodes_coords)
-
 
 # 2) Быстрый nearest_graph_node через KDTree
 def nearest_graph_node(point, G, kdtree=kdtree, nodes=nodes):
@@ -391,7 +382,7 @@ uuid_layers = {}
 
 for uid in df['uuid'].unique():
     sub_df = df[df['uuid'] == uid].sort_values('signal_time')
-    uid_layer = folium.FeatureGroup(name=f"Id Транспорта {uid}", show=False)
+    uid_layer = folium.FeatureGroup(name=f"Автобус {uid}", show=False)
 
     prev_point = None
     for _, row in sub_df.iterrows():
@@ -479,7 +470,7 @@ if len(stops) > 0:
     stops_export = stops[['stop_id', 'stop_name', 'lat', 'lon']].copy()
     # Добавляем информацию о количестве точек и времени остановки в описание
     stops_export['stop_desc'] = stops.apply(
-        lambda x: f"Точек: {x['point_count']}, Время: {int(x['duration'] // 60)} мин {int(x['duration'] % 60)} сек",
+        lambda x: f"Точек: {x['point_count']}, Время: {int(x['duration'] // 60)} мин {int(x['duration'] % 60)} сек", 
         axis=1
     )
     stops_export.to_csv(stops_file, index=False)
@@ -492,7 +483,7 @@ else:
 routes_file = os.path.join(gtfs_dir, 'routes.txt')
 with open(routes_file, 'w') as f:
     f.write('route_id,route_short_name,route_long_name,route_type\n')
-    f.write('route_1,1,Маршрут 1,3\n')  # 3 - транспорт
+    f.write('route_1,1,Маршрут 1,3\n')  # 3 - автобус
 
 # Создаем файл trips.txt
 trips_file = os.path.join(gtfs_dir, 'trips.txt')
@@ -511,13 +502,13 @@ stop_times_file = os.path.join(gtfs_dir, 'stop_times.txt')
 if len(stops) > 0:
     with open(stop_times_file, 'w') as f:
         f.write('trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign\n')
-
+        
         # Сортируем остановки по времени
         sorted_stops = stops.sort_values('signal_time')
-
+        
         # Получаем время первой остановки
         first_time = sorted_stops['signal_time'].iloc[0]
-
+        
         # Добавляем каждую остановку
         for i, (idx, stop) in enumerate(sorted_stops.iterrows()):
             # Вычисляем время прибытия и отправления
@@ -525,14 +516,14 @@ if len(stops) > 0:
             hours = int(time_diff // 3600)
             minutes = int((time_diff % 3600) // 60)
             seconds = int(time_diff % 60)
-
+            
             time_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
+            
             # Форматируем информацию о количестве точек и времени остановки
             stop_info = f"Точек: {stop['point_count']}, Время: {int(stop['duration'] // 60)} мин {int(stop['duration'] % 60)} сек"
-
+            
             # Добавляем запись в файл
-            f.write(f'trip_1,{time_str},{time_str},{stop["stop_id"]},{i + 1},{stop_info}\n')
+            f.write(f'trip_1,{time_str},{time_str},{stop["stop_id"]},{i+1},{stop_info}\n')
 else:
     # Создаем пустой файл с заголовками
     with open(stop_times_file, 'w') as f:
