@@ -8,6 +8,13 @@ from sklearn.cluster import DBSCAN
 import zipfile
 import csv
 import io
+import geopandas as gpd
+from shapely.strtree import STRtree
+from shapely.geometry import Point
+from geopy.distance import geodesic
+import networkx as nx
+from shapely.geometry import LineString
+import scipy.spatial
 
 # Загрузка данных из CSV-файла с указанием правильного разделителя
 print("Загрузка данных из CSV-файла...")
@@ -34,6 +41,32 @@ if isinstance(df['signal_time'].iloc[0], str):
 # Сортировка по времени
 df = df.sort_values('signal_time')
 
+# Вычисление средней скорости по всему маршруту
+avg_speed = df['speed'].mean()
+# порог средней и «половинчатой» скоростей
+mid_speed = avg_speed / 2
+
+avg_speed_kmh = avg_speed * 3.6
+mid_speed_kmh = avg_speed_kmh / 2
+
+
+def speed_color_kmh(v_mps):
+    """
+    v_mps — скорость в м/с
+    переводим в км/ч и раскрашиваем:
+      ≥ avg_speed_kmh → green
+      ≥ mid_speed_kmh → orange
+      < mid_speed_kmh → red
+    """
+    v_kmh = v_mps * 3.6
+    if v_kmh >= avg_speed_kmh:
+        return 'green'
+    elif v_kmh >= mid_speed_kmh:
+        return 'orange'
+    else:
+        return 'red'
+
+
 print(f"Загружено {len(df)} записей с координатами")
 
 # Определение остановок
@@ -43,7 +76,7 @@ print("Определение остановок...")
 SPEED_THRESHOLD = 1.9  # м/с
 MIN_STOP_DURATION = 35  # секунды - изменено с 20 на 45 секунд
 DISTANCE_THRESHOLD = 0.001  # примерно 100 метров в градусах
-STOP_AGGREGATION_THRESHOLD = 0.003  # примерно 300 метров для агрегации остановок
+STOP_AGGREGATION_THRESHOLD = 0.0001  # примерно 300 метров для агрегации остановок
 
 # Находим точки с низкой скоростью
 low_speed_points = df[df['speed'] < SPEED_THRESHOLD].copy()
@@ -121,7 +154,50 @@ print("Создание карты...")
 # Определение центра карты (средние координаты)
 center_lat = df['lat'].mean()
 center_lon = df['lon'].mean()
-map_tracks = folium.Map(location=[center_lat, center_lon], zoom_start=12)
+map_tracks = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles=None)
+# Добавление отключаемого слоя OpenStreetMap
+folium.TileLayer(
+    tiles='OpenStreetMap',
+    name='OSM карта',
+    control=True,
+    overlay=True,
+    show=True
+).add_to(map_tracks)
+
+# — ВСТАВКА: загрузка и отображение графа дорожной сети
+roads = gpd.read_file("../../sources/UDS/Граф Иркутск_link.SHP").to_crs(epsg=4326)
+# Собираем список геометрий дорог и строим STR-дерево
+road_geoms = list(roads.geometry)
+road_tree = STRtree(road_geoms)
+
+
+def snap_to_road_point(lat, lon):
+    pt = Point(lon, lat)
+    # nearest возвращает индекс ближайшей геометрии
+    idx = road_tree.nearest(pt)
+    nearest_line = road_geoms[idx]
+    # проекция точки на линию
+    proj_pt = nearest_line.interpolate(nearest_line.project(pt))
+    return proj_pt.y, proj_pt.x  # y=lat, x=lon
+
+
+print("Снаппим все точки маршрута на сеть дорог…")
+# Перезаписываем lat, lon в исходном df — дальше в коде менять ничего не нужно
+df[['lat', 'lon']] = df.apply(
+    lambda r: pd.Series(snap_to_road_point(r['lat'], r['lon'])),
+    axis=1
+)
+
+fg_roads = folium.FeatureGroup(name="Сеть дорог", show=False)
+folium.GeoJson(
+    roads,
+    style_function=lambda feat: {
+        "color": "blue",
+        "weight": 1,
+        "opacity": 0.5
+    }
+).add_to(fg_roads)
+fg_roads.add_to(map_tracks)
 
 # Создаем слой для точек маршрута
 points_layer = folium.FeatureGroup(name="Точки маршрута")
@@ -219,14 +295,14 @@ if len(stops) > 0:
         # Привязываем к кластеру (по координатам)
         stops_uuids['stop_cluster'] = clustering.labels_
 
-        # Считаем количество уникальных автобусов (uuid) на каждой остановке
+        # Считаем количество уникальных транспорта (uuid) на каждой остановке
         uuid_counts = stops_uuids.groupby('stop_cluster')['uuid'].nunique().reset_index()
         uuid_counts.columns = ['stop_cluster', 'unique_uuids']
 
         # Объединяем с aggregated_stops
         aggregated_stops = aggregated_stops.merge(uuid_counts, on='stop_cluster', how='left')
 
-        # Фильтруем — только остановки, которые посещают >= MIN_UUIDS автобусов
+        # Фильтруем — только остановки, которые посещают >= MIN_UUIDS транспорта
         MIN_UUIDS = 3
         aggregated_stops['is_potential_terminal'] = (
                 (aggregated_stops['duration'] > median_stop_duration * DURATION_FACTOR) &
@@ -252,7 +328,7 @@ if len(stops) > 0:
             icon_name = 'flag-checkered'
             stop_type = 'Конечная остановка'
             if 'unique_uuids' in stop:
-                popup_text += f"<br>UUID автобусов: {stop['unique_uuids']}"
+                popup_text += f"<br>UUID транспорта: {stop['unique_uuids']}"
         else:
             icon_color = 'blue'
             icon_name = 'bus'
@@ -279,21 +355,77 @@ if len(stops) > 0:
 points_layer.add_to(map_tracks)
 stops_layer.add_to(map_tracks)
 
+
+def build_graph_from_roads(roads_gdf):
+    G = nx.Graph()
+    for i, row in roads_gdf.iterrows():
+        geom = row.geometry
+        if isinstance(geom, LineString):
+            coords = list(geom.coords)
+            for start, end in zip(coords[:-1], coords[1:]):
+                dist = Point(start).distance(Point(end))
+                G.add_edge(start, end, weight=dist, geometry=LineString([start, end]))
+    return G
+
+
+print("Создаём граф дорог…")
+G_roads = build_graph_from_roads(roads)
+
+nodes = list(G_roads.nodes)
+# узлы хранятся как (x, y) == (lon, lat)
+nodes_coords = [(x, y) for x, y in nodes]
+kdtree = scipy.spatial.KDTree(nodes_coords)
+
+
+# 2) Быстрый nearest_graph_node через KDTree
+def nearest_graph_node(point, G, kdtree=kdtree, nodes=nodes):
+    lat, lon = point
+    # query принимает (lon, lat)
+    _, idx = kdtree.query((lon, lat))
+    return nodes[idx]
+
+
 print("Добавление маршрутов по uuid...")
 
 uuid_layers = {}
-for uid in df['uuid'].unique():
-    sub_df = df[df['uuid'] == uid]
-    uid_layer = folium.FeatureGroup(name=f"Автобус {uid}", show=False)
 
-    coords = list(zip(sub_df['lat'], sub_df['lon']))
-    folium.PolyLine(
-        coords,
-        color='purple',
-        weight=2,
-        opacity=0.5,
-        tooltip=f"UUID: {uid}"
-    ).add_to(uid_layer)
+for uid in df['uuid'].unique():
+    sub_df = df[df['uuid'] == uid].sort_values('signal_time')
+    uid_layer = folium.FeatureGroup(name=f"Id Транспорта {uid}", show=False)
+
+    prev_point = None
+    for _, row in sub_df.iterrows():
+        current_point = (row['lat'], row['lon'])
+
+        if prev_point:
+            start_node = nearest_graph_node(prev_point, G_roads)
+            end_node = nearest_graph_node(current_point, G_roads)
+
+            try:
+                # Ищем кратчайший путь между точками
+                path_nodes = nx.shortest_path(G_roads, source=start_node, target=end_node, weight='weight')
+                path_coords = [(y, x) for x, y in path_nodes]  # переворачиваем в (lat, lon)
+
+                # Получаем скорость этого сегмента:
+                seg_speed_mps = row['speed']
+                seg_speed_kmh = seg_speed_mps * 3.6
+
+                folium.PolyLine(
+                    path_coords,
+                    color=speed_color_kmh(seg_speed_mps),
+                    weight=3,
+                    opacity=0.8,
+                    tooltip=(
+                        f"UUID: {uid}<br>"
+                        f"Время: {row['signal_time']}<br>"
+                        f"Скорость: {seg_speed_kmh:.1f} км/ч<br>"
+                        f"Средняя: {avg_speed_kmh:.1f} км/ч"
+                    )
+                ).add_to(uid_layer)
+            except nx.NetworkXNoPath:
+                print(f"⚠️ Нет пути между точками для UUID {uid}")
+
+        prev_point = current_point
 
     uuid_layers[uid] = uid_layer
     uid_layer.add_to(map_tracks)
@@ -309,6 +441,27 @@ folium.LayerControl(collapsed=False).add_to(map_tracks)
 
 # Сохранение карты в HTML-файл
 output_file = 'transport_tracks_with_stops.html'
+# Добавление легенды со средней скоростью
+legend_html = f"""
+<div style="position: fixed; bottom: 50px; left: 50px; width: 200px; 
+     background-color: white; border:2px solid grey; z-index:9999; padding: 10px; font-size:14px;">
+  <b>Легенда скорости</b><br>
+  <div style="display: flex; align-items: center; margin-top:4px;">
+    <div style="width:16px; height:16px; background:green; margin-right:6px;"></div>
+    ≥ {avg_speed_kmh:.1f} км/ч
+  </div>
+  <div style="display: flex; align-items: center; margin-top:4px;">
+    <div style="width:16px; height:16px; background:orange; margin-right:6px;"></div>
+    {mid_speed_kmh:.1f} – {avg_speed_kmh:.1f} км/ч
+  </div>
+  <div style="display: flex; align-items: center; margin-top:4px;">
+    <div style="width:16px; height:16px; background:red; margin-right:6px;"></div>
+    < {mid_speed_kmh:.1f} км/ч
+  </div>
+</div>
+"""
+
+map_tracks.get_root().html.add_child(folium.Element(legend_html))
 map_tracks.save(output_file)
 print(f"Карта сохранена в файл: {output_file}")
 
@@ -339,7 +492,7 @@ else:
 routes_file = os.path.join(gtfs_dir, 'routes.txt')
 with open(routes_file, 'w') as f:
     f.write('route_id,route_short_name,route_long_name,route_type\n')
-    f.write('route_1,1,Маршрут 1,3\n')  # 3 - автобус
+    f.write('route_1,1,Маршрут 1,3\n')  # 3 - транспорт
 
 # Создаем файл trips.txt
 trips_file = os.path.join(gtfs_dir, 'trips.txt')

@@ -41,6 +41,7 @@ class ScriptRunner:
     def run_transport_script():
         """Запуск скрипта для работы с транспортом"""
         script_path = AppConfig.SCRIPTS["Работа с транспортом"]
+
         try:
             subprocess.run([sys.executable, os.path.basename(script_path)],
                            check=True, cwd=os.path.dirname(script_path))
@@ -83,47 +84,40 @@ class MainWindow:
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
-        self.create_input_section(main_frame)
+        self.create_transport_section(main_frame)
         self.create_buttons_section(main_frame)
 
-    def create_input_section(self, parent):
+    def create_transport_section(self, parent):
         """Создание секции ввода параметров"""
-        input_frame = ttk.LabelFrame(parent, text="Параметры поиска")
-        input_frame.pack(fill="x", pady=10)
+        transport_frame = ttk.LabelFrame(parent, text="Работа с анкетами транспорта")
+        transport_frame.pack(fill="x", pady=10)
 
         # Выбор типа транспорта
-        ttk.Label(input_frame, text="Тип транспорта:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        ttk.Label(transport_frame, text="Тип транспорта:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
         self.vehicle_type_var = tk.StringVar(value=AppConfig.VEHICLE_TYPES[0])
         ttk.Combobox(
-            input_frame,
+            transport_frame,
             textvariable=self.vehicle_type_var,
             values=AppConfig.VEHICLE_TYPES,
             state="readonly"
         ).grid(row=0, column=1, sticky="ew", padx=5, pady=5)
 
         # Ввод номера маршрута
-        ttk.Label(input_frame, text="Номер маршрута:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        self.route_entry = ttk.Entry(input_frame)
+        ttk.Label(transport_frame, text="Номер маршрута:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        self.route_entry = ttk.Entry(transport_frame)
         self.route_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+
+        # Кнопка для обработки транспорта
+        ttk.Button(
+            transport_frame,
+            text="Обработать транспорт",
+            command=self.process_save_route
+        ).grid(row=1, column=2, padx=10, pady=5)
 
     def create_buttons_section(self, parent):
         """Создание секции кнопок"""
         buttons_frame = ttk.Frame(parent)
         buttons_frame.pack(pady=20)
-
-        # Кнопка для сохранения маршрута в csv
-        ttk.Button(
-            buttons_frame,
-            text="Сохранить маршрут в csv",
-            command=self.process_save_route
-        ).pack(side="left", padx=10, pady=5)
-
-        # Кнопка для обработки транспорта
-        ttk.Button(
-            buttons_frame,
-            text="Обработать транспорт",
-            command=ScriptRunner.run_transport_script
-        ).pack(side="left", padx=10, pady=5)
 
         # Кнопка для работы с анкетами
         ttk.Button(
@@ -149,6 +143,7 @@ class MainWindow:
             return
 
         ScriptRunner.run_save_route(vehicle_type, route)
+        ScriptRunner.run_transport_script()
 
 
 def main():
