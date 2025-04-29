@@ -50,8 +50,8 @@ folium.GeoJson(
 
 # 9) Цвета для UUID
 uuid_colors = {
-    uid: "#{:06x}".format(random.randint(0, 0xFFFFFF))
-    for uid in gdf['uuid'].unique()
+    uuid: "#{:06x}".format(random.randint(0, 0xFFFFFF))
+    for uuid in gdf['uuid'].unique()
 }
 
 # 10) Рисуем «snap’нутые» точки
@@ -73,9 +73,9 @@ legend = """<div style="
     background: white; padding: 10px; border:1px solid grey;
     z-index:9999; font-size:14px;
 "><b>UUID → цвет</b><br>"""
-for uid, c in uuid_colors.items():
+for uuid, c in uuid_colors.items():
     legend += f"<i style='background:{c};width:12px;height:12px;" \
-              "display:inline-block;margin-right:5px;'></i>{uid}<br>"
+              "display:inline-block;margin-right:5px;'></i>{uuid}<br>"
 legend += "</div>"
 m.get_root().html.add_child(folium.Element(legend))
 
