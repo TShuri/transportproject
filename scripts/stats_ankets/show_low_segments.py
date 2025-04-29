@@ -55,7 +55,7 @@ def display_geojson_segments(geojson_path, uds_geojson_path):
         style_function=lambda feat: {
             "color": "blue",
             "weight": 1,
-            "opacity": 0.8
+            "opacity": 0.6
         },
         overlay=True,
         control=True,
@@ -103,8 +103,7 @@ def display_geojson_segments(geojson_path, uds_geojson_path):
         position: fixed; 
         bottom: 50px; 
         left: 50px; 
-        width: 160px;
-        height: 110px;
+        width: 200px;
         background-color: white;
         border: 2px solid grey;
         z-index: 9999;
