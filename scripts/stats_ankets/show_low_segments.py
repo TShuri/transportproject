@@ -35,20 +35,32 @@ def display_geojson_segments(geojson_path, uds_geojson_path):
     lons = [coord[0] for coord in all_coords]
     center = [sum(lats) / len(lats), sum(lons) / len(lons)]
 
-    # Создаем карту
-    m = folium.Map(location=center, zoom_start=13)
+    # 1. Создаем карту БЕЗ автоматической подложки
+    m = folium.Map(location=center, zoom_start=13, tiles=None, control_scale=True)
 
-    roads = gpd.read_file("../../sources/UDS/Граф Иркутск_link.SHP").to_crs(epsg=4326)
-    fg_roads = folium.FeatureGroup(name="УДС", show=False)
+    # 2. Добавляем OpenStreetMap как отдельный переключаемый слой
+    tile_layer = folium.TileLayer(
+        tiles='OpenStreetMap',
+        name='Базовая карта',
+        overlay=True,  # Это ключевой параметр!
+        control=True,
+        show=True
+    ).add_to(m)
+
+    # 3. Добавляем граф УДС
+    roads = gpd.read_file(uds_geojson_path).to_crs(epsg=4326)
     folium.GeoJson(
         roads,
+        name='Улично-дорожная сеть',
         style_function=lambda feat: {
             "color": "blue",
             "weight": 1,
             "opacity": 0.8
-        }
-    ).add_to(fg_roads)
-    fg_roads.add_to(m)
+        },
+        overlay=True,
+        control=True,
+        show=False
+    ).add_to(m)
 
     # Создаем группы слоев для треков
     speed_under_5 = folium.FeatureGroup(name='< 5 км/ч', show=True)
@@ -107,8 +119,8 @@ def display_geojson_segments(geojson_path, uds_geojson_path):
     '''
     m.get_root().html.add_child(folium.Element(legend_html))
 
-    # Добавляем контроль слоев
-    folium.LayerControl().add_to(m)
+    # Добавляем расширенный контроль слоев
+    folium.LayerControl(collapsed=False).add_to(m)
 
     # Сохраняем и открываем карту
     output_file = 'speed_segments_with_uds_map.html'
