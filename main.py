@@ -6,7 +6,8 @@ import subprocess
 # Здесь кнопки и пути к скриптам
 scripts = {
     "Работа с анкетами": "scripts/ankets/ankets_script.py",
-    "Работа с транспортом": "scripts/transports/transports_script.py"
+    "Работа с транспортом": "scripts/transports/transports_script.py",
+    "Работа с транспортом и остановками": "scripts/transports/map_tracks_with_stops.py"
 }
 
 def run_script(path):

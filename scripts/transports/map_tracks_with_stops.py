@@ -210,6 +210,26 @@ if len(stops) > 0:
         # Заменяем исходный DataFrame агрегированным
         stops = aggregated_stops
 
+        # Сохраняем связи остановки ↔ uuid
+        stops_uuids = potential_stops[['lat', 'lon', 'cluster_id', 'uuid']].copy()
+
+        # Привязываем к кластеру (по координатам)
+        stops_uuids['stop_cluster'] = clustering.labels_
+
+        # Считаем количество уникальных автобусов (uuid) на каждой остановке
+        uuid_counts = stops_uuids.groupby('stop_cluster')['uuid'].nunique().reset_index()
+        uuid_counts.columns = ['stop_cluster', 'unique_uuids']
+
+        # Объединяем с aggregated_stops
+        aggregated_stops = aggregated_stops.merge(uuid_counts, on='stop_cluster', how='left')
+
+        # Фильтруем — только остановки, которые посещают >= MIN_UUIDS автобусов
+        MIN_UUIDS = 3
+        aggregated_stops['is_potential_terminal'] = (
+                (aggregated_stops['duration'] > median_stop_duration * DURATION_FACTOR) &
+                (aggregated_stops['point_count'] >= MIN_POINTS) &
+                (aggregated_stops['unique_uuids'] >= MIN_UUIDS)
+        )
 
         print(f"После агрегации осталось {len(stops)} остановок")
 
@@ -228,6 +248,8 @@ if len(stops) > 0:
             icon_color = 'darkred'
             icon_name = 'flag-checkered'
             stop_type = 'Конечная остановка'
+            if 'unique_uuids' in stop:
+                popup_text += f"<br>UUID автобусов: {stop['unique_uuids']}"
         else:
             icon_color = 'blue'
             icon_name = 'bus'
@@ -255,8 +277,33 @@ if len(stops) > 0:
 points_layer.add_to(map_tracks)
 stops_layer.add_to(map_tracks)
 
-# Добавление контроля слоев
-folium.LayerControl().add_to(map_tracks)
+print("Добавление маршрутов по uuid...")
+
+uuid_layers = {}
+for uid in df['uuid'].unique():
+    sub_df = df[df['uuid'] == uid]
+    uid_layer = folium.FeatureGroup(name=f"Автобус {uid}", show=False)
+
+    coords = list(zip(sub_df['lat'], sub_df['lon']))
+    folium.PolyLine(
+        coords,
+        color='purple',
+        weight=2,
+        opacity=0.5,
+        tooltip=f"UUID: {uid}"
+    ).add_to(uid_layer)
+
+    uuid_layers[uid] = uid_layer
+    uid_layer.add_to(map_tracks)
+
+# Добавление всех слоёв
+points_layer.add_to(map_tracks)
+stops_layer.add_to(map_tracks)
+for uid_layer in uuid_layers.values():
+    uid_layer.add_to(map_tracks)
+
+# Панель управления слоями
+folium.LayerControl(collapsed=False).add_to(map_tracks)
 
 # Сохранение карты в HTML-файл
 output_file = 'transport_tracks_with_stops.html'
