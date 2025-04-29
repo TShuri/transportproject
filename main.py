@@ -10,9 +10,10 @@ class AppConfig:
     """Конфигурация приложения"""
     ROUTES_JSON = './sources/geotracks_transports/routes/routes.json'
     SCRIPTS = {
-        "Работа с анкетами": "scripts/ankets/ankets_script.py",
+        "Сохранение маршрута в csv": "scripts/other/extract_type_route.py",
         "Работа с транспортом": "scripts/transports_with_stops/transports_with_stops.py",
-        "Сохранение маршрута в csv": "scripts/other/extract_type_route.py"
+        "Работа с анкетами": "scripts/ankets/ankets_script.py",
+        "УДС с сегментами по анкетам": "scripts/stats_ankets/show_low_segments.py"
     }
     VEHICLE_TYPES = ["bus", "minibus", "tramway", "trolleybus"]
     WINDOW_SIZE = "700x300"
@@ -50,6 +51,16 @@ class ScriptRunner:
     def run_ankets_script():
         """Запуск скрипта для работы с анкетами"""
         script_path = AppConfig.SCRIPTS["Работа с анкетами"]
+        try:
+            subprocess.run([sys.executable, os.path.basename(script_path)],
+                           check=True, cwd=os.path.dirname(script_path))
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Ошибка запуска скрипта: {str(e)}")
+
+    @staticmethod
+    def run_uds_segments_for_ankets_script():
+        """Запуск скрипта для работы с анкетами"""
+        script_path = AppConfig.SCRIPTS["УДС с сегментами по анкетам"]
         try:
             subprocess.run([sys.executable, os.path.basename(script_path)],
                            check=True, cwd=os.path.dirname(script_path))
@@ -119,6 +130,13 @@ class MainWindow:
             buttons_frame,
             text="Работа с анкетами",
             command=ScriptRunner.run_ankets_script
+        ).pack(side="left", padx=10, pady=5)
+
+        # Кнопка для работы с анкетами
+        ttk.Button(
+            buttons_frame,
+            text="УДС с сегментами по анкетам",
+            command=ScriptRunner.run_uds_segments_for_ankets_script
         ).pack(side="left", padx=10, pady=5)
 
     def process_save_route(self):
