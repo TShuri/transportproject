@@ -1,7 +1,7 @@
 import os
 import sys
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from tkinter import ttk
 import subprocess
 
@@ -49,12 +49,13 @@ class ScriptRunner:
             messagebox.showerror("Ошибка", f"Ошибка запуска скрипта: {str(e)}")
 
     @staticmethod
-    def run_ankets_script():
+    def run_ankets_script(path_gpx_file):
         """Запуск скрипта для работы с анкетами"""
         script_path = AppConfig.SCRIPTS["Работа с анкетами"]
         try:
-            subprocess.run([sys.executable, os.path.basename(script_path)],
-                           check=True, cwd=os.path.dirname(script_path))
+            args = [sys.executable, os.path.basename(script_path),
+                    "--gpx_file", path_gpx_file]
+            subprocess.run(args, check=True, cwd=os.path.dirname(script_path))
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка запуска скрипта: {str(e)}")
 
@@ -85,11 +86,11 @@ class MainWindow:
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         self.create_transport_section(main_frame)
-        self.create_buttons_section(main_frame)
+        self.create_ankets_section(main_frame)
 
     def create_transport_section(self, parent):
-        """Создание секции ввода параметров"""
-        transport_frame = ttk.LabelFrame(parent, text="Работа с анкетами транспорта")
+        """Создание секции с работой треками транспорта"""
+        transport_frame = ttk.LabelFrame(parent, text="Работа с треками транспорта")
         transport_frame.pack(fill="x", pady=10)
 
         # Выбор типа транспорта
@@ -111,30 +112,58 @@ class MainWindow:
         ttk.Button(
             transport_frame,
             text="Обработать транспорт",
-            command=self.process_save_route
+            command=self.process_route
         ).grid(row=1, column=2, padx=10, pady=5)
 
-    def create_buttons_section(self, parent):
-        """Создание секции кнопок"""
-        buttons_frame = ttk.Frame(parent)
-        buttons_frame.pack(pady=20)
+    def create_ankets_section(self, parent):
+        """Создание секции работы с треками анкет"""
+        ankets_frame = ttk.LabelFrame(parent, text="Работа с треками анкет")
+        ankets_frame.pack(fill="x", pady=10)
+
+        # Выбор файла анкеты
+        ttk.Label(ankets_frame, text="Файл анкеты:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+
+        # Фрейм для поля ввода и кнопки выбора файла
+        file_frame = ttk.Frame(ankets_frame)
+        file_frame.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
+
+        # Поле для отображения пути к файлу
+        self.file_entry = ttk.Entry(file_frame)
+        self.file_entry.pack(side="left", fill="x", expand=True)
+
+        # Кнопка выбора файла
+        ttk.Button(
+            file_frame,
+            text="Выбрать...",
+            command=self._select_anket_file
+        ).pack(side="right", padx=(5, 0))
 
         # Кнопка для работы с анкетами
         ttk.Button(
-            buttons_frame,
+            ankets_frame,
             text="Работа с анкетами",
-            command=ScriptRunner.run_ankets_script
-        ).pack(side="left", padx=10, pady=5)
+            command=self.process_anket
+        ).grid(row=2, column=1, padx=10, pady=5)
 
         # Кнопка для работы с анкетами
         ttk.Button(
-            buttons_frame,
-            text="УДС с сегментами по анкетам",
+            ankets_frame,
+            text="УДС с сегментами по всем анкетам",
             command=ScriptRunner.run_uds_segments_for_ankets_script
-        ).pack(side="left", padx=10, pady=5)
+        ).grid(row=2, column=2, padx=10, pady=5)
 
-    def process_save_route(self):
-        """Обработка нажатия кнопки для сохранения маршрута"""
+    def _select_anket_file(self):
+        """Открытие диалога выбора файла"""
+        file_path = filedialog.askopenfilename(
+            title="Выберите файл анкеты",
+            filetypes=[(".gpx файлы", "*.gpx"), ("Все файлы", "*.*")]
+        )
+        if file_path:
+            self.file_entry.delete(0, tk.END)
+            self.file_entry.insert(0, file_path)
+
+    def process_route(self):
+        """Обработка нажатия кнопки для обработки маршрута"""
         vehicle_type = self.vehicle_type_var.get()
         route = self.route_entry.get().strip() or None
 
@@ -144,6 +173,16 @@ class MainWindow:
 
         ScriptRunner.run_save_route(vehicle_type, route)
         ScriptRunner.run_transport_script()
+
+    def process_anket(self):
+        """Обработка нажатия кнопки для обработки маршрута"""
+        gpx_file = self.file_entry.get()
+
+        if not gpx_file:
+            messagebox.showwarning("Предупреждение", "Выберите файл")
+            return
+
+        ScriptRunner.run_ankets_script(gpx_file)
 
 
 def main():

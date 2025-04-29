@@ -2,6 +2,7 @@ import folium
 import webbrowser
 import json
 import geopandas as gpd
+import iteration_all_ankets
 
 
 def display_geojson_segments(geojson_path, uds_geojson_path):
@@ -130,6 +131,12 @@ def display_geojson_segments(geojson_path, uds_geojson_path):
 
 # Пример использования
 if __name__ == "__main__":
+    # Укажите параметры
+    root_directory = "../../sources/geotracks_ankets/"
+    output_geojson_file = "../../sources/stats_ankets/low_speed_segments.geojson"
+    # Вызов функции
+    iteration_all_ankets.process_gpx_directory(root_directory, output_geojson_file)
+
     # Укажите пути к файлам
     geojson_file = "../../sources/stats_ankets/low_speed_segments.geojson"
     uds_file = "../../sources/UDS/Граф Иркутск_link_geojson.geojson"

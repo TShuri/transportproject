@@ -1,6 +1,17 @@
+import json
 import os
 from find_low_speed_segments import analyze_and_append_low_speed_segments
 
+
+def clear_geojson_file(file_path):
+    """Очищает GeoJSON файл, оставляя только базовую структуру"""
+    empty_geojson = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    with open(file_path, 'w', encoding='utf-8') as f:
+        json.dump(empty_geojson, f, ensure_ascii=False, indent=4)
+    print(f"Файл {file_path} очищен")
 
 def process_gpx_directory(root_dir, output_geojson):
     """
@@ -10,6 +21,17 @@ def process_gpx_directory(root_dir, output_geojson):
         root_dir (str): Корневая директория для поиска GPX файлов
         output_geojson (str): Путь к выходному GeoJSON файлу
     """
+    # Очищаем выходной файл перед началом обработки
+    if os.path.exists(output_geojson):
+        clear_geojson_file(output_geojson)
+    else:
+        # Создаем пустой файл, если его нет
+        with open(output_geojson, 'w', encoding='utf-8') as f:
+            json.dump({
+                "type": "FeatureCollection",
+                "features": []
+            }, f, ensure_ascii=False, indent=4)
+
     total_files = 0
     total_segments = 0
 
